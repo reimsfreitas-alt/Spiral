@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpiralCore</title>
+
+<style>
+body {
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:Arial;
+}
+
+/* 🔒 BLOQUEIO */
+#gate {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+button {
+  padding:15px;
+  margin-top:20px;
+  font-size:16px;
+  background:#222;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+
+/* 🚫 APP COMEÇA ESCONDIDO */
+#app {
+  width:100%;
+  max-width:500px;
+  height:100vh;
+  display:none;
+  flex-direction:column;
+  margin:auto;
+}
+
+#chat {
+  flex:1;
+  overflow:auto;
+  padding:10px;
+}
+
+input {
+  padding:10px;
+  background:#111;
+  color:#fff;
+  border:none;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- 🔒 BLOQUEIO -->
+
+<div id="gate">
+  <h1>🔒 Acesso restrito</h1>
+  <p>Entre para usar a IA</p>
+  <button onclick="irParaPagamento()">Entrar agora 🚀</button>
+</div>
+
+<!-- 🤖 APP -->
+
+<div id="app">
+  <h2>SpiralCore</h2>
+  <div id="chat"></div>
+  <input id="input" placeholder="Digite..." />
+</div>
+
+<script>
+
+// 🔥 LIBERA APÓS PAGAMENTO
+if(window.location.href.includes("success=true")){
+  localStorage.setItem("premium", "true");
+}
+
+// 🔒 CONTROLE DE ACESSO
+function checarAcesso(){
+  const premium = localStorage.getItem("premium");
+
+  if(premium === "true"){
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+  } else {
+    document.getElementById("gate").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+  }
+}
+
+checarAcesso();
+
+// 💰 IR PRO STRIPE
+function irParaPagamento(){
+  const successURL = window.location.origin + "?success=true";
+
+  window.location.href = "https://buy.stripe.com/7sYdR2fmX2008ZV0zFbbG02" +
+    "?success_url=" + encodeURIComponent(successURL);
+}
+
+// 🤖 IA
+const API_URL = "https://throbbing-snowflake-e6e7.reimsfreitas.workers.dev";
+
+function addMessage(text){
+  let div = document.createElement("div");
+  div.innerText = text;
+  document.getElementById("chat").appendChild(div);
+  document.getElementById("chat").scrollTop = 9999;
+}
+
+document.getElementById("input").addEventListener("keydown", async function(e){
+  if(e.key === "Enter"){
+    let val = this.value;
+    this.value = "";
+
+    addMessage("Pensando...");
+
+    try {
+      let res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: val })
+      });
+
+      let data = await res.json();
+      addMessage(data.response || "Sem resposta.");
+
+    } catch(err){
+      addMessage("Erro ao conectar com IA.");
+    }
+  }
+});
+
+</script>
+
+</body>
+</html>
