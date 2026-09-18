@@ -1,11 +1,12 @@
 import { Pool } from "pg";
 import { SpiralOS } from "../../packages/spiral-kernel/src/orchestrator";
 
-describe("Spiral OS kernel ingest", () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  const run = databaseUrl ? describe : describe.skip;
+const databaseUrl = process.env.DATABASE_URL;
 
-  run("governs and persists an allowed event", async () => {
+describe("Spiral OS kernel ingest", () => {
+  if (!databaseUrl) return;
+
+  test("governs and persists an allowed event", async () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const os = new SpiralOS(pool);
     const tenantId = "44444444-4444-4444-4444-444444444444";
@@ -43,7 +44,7 @@ describe("Spiral OS kernel ingest", () => {
     }
   });
 
-  run("blocks obvious PII before persistence", async () => {
+  test("blocks obvious PII before persistence", async () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const os = new SpiralOS(pool);
     const tenantId = "55555555-5555-5555-5555-555555555555";
