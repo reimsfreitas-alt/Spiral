@@ -19,11 +19,12 @@ class LiteBranch {
   }
 }
 
-describe("Spiral OS production closed loop", () => {
-  const databaseUrl = process.env.DATABASE_URL;
-  const run = databaseUrl ? describe : describe.skip;
+const databaseUrl = process.env.DATABASE_URL;
 
-  run("event -> knowledge -> mutation -> execution -> Truth -> knowledge V2", async () => {
+describe("Spiral OS production closed loop", () => {
+  if (!databaseUrl) return;
+
+  test("event -> knowledge -> mutation -> execution -> Truth -> knowledge V2", async () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const tenantId = "22222222-2222-2222-2222-222222222222";
     const correlationId = "77777777-7777-7777-7777-777777777777";
