@@ -64,6 +64,11 @@ ALTER TABLE knowledge_repository ENABLE ROW LEVEL SECURITY;
 ALTER TABLE idempotency_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE branch_registry ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE event_log FORCE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_repository FORCE ROW LEVEL SECURITY;
+ALTER TABLE idempotency_ledger FORCE ROW LEVEL SECURITY;
+ALTER TABLE branch_registry FORCE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS tenant_isolation_policy_events ON event_log;
 CREATE POLICY tenant_isolation_policy_events ON event_log FOR ALL
 USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::UUID)
