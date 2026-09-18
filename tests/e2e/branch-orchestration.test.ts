@@ -3,11 +3,12 @@ import { EventFabric } from "../../packages/spiral-kernel/src/event-fabric";
 import { KnowledgeFabric } from "../../packages/spiral-kernel/src/knowledge-fabric";
 import { LiteBranchAdapter, SpiralOS } from "../../packages/spiral-kernel/src/orchestrator";
 
-describe("Spiral OS branch orchestration", () => {
-  const url = process.env.DATABASE_URL;
-  const run = url ? describe : describe.skip;
+const url = process.env.DATABASE_URL;
 
-  run("routes real knowledge into a real Lite branch and records the mutation", async () => {
+describe("Spiral OS branch orchestration", () => {
+  if (!url) return;
+
+  test("routes real knowledge into a real Lite branch and records the mutation", async () => {
     const pool = new Pool({ connectionString: url });
     const tenantId = "33333333-3333-3333-3333-333333333333";
     const correlationId = "88888888-8888-8888-8888-888888888888";
