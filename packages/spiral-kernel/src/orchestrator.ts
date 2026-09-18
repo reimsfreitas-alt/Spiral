@@ -2,6 +2,23 @@ import { Pool } from "pg";
 import { EventFabric } from "./event-fabric";
 import { KnowledgeRecord } from "./knowledge-fabric";
 import { KnowledgeRouter } from "./router";
+import { MemoryGovernor } from "./governor";
+
+export interface KernelIngestInput {
+  tenantId: string;
+  sourceModule: string;
+  eventType: string;
+  correlationId: string;
+  payload: Record<string, unknown>;
+  confidence?: number;
+  causationId?: string;
+}
+
+export interface KernelIngestResult {
+  allowed: boolean;
+  eventId?: string;
+  reason?: string;
+}
 
 export interface BranchAdapter {
   branchName: string;
@@ -18,10 +35,30 @@ export interface BranchAdapter {
 export class SpiralOS {
   private readonly events: EventFabric;
   private readonly router = new KnowledgeRouter();
+  private readonly governor = new MemoryGovernor();
   private readonly branches = new Map<string, BranchAdapter>();
 
   constructor(private readonly pool: Pool) {
     this.events = new EventFabric(pool);
+  }
+
+  async ingest(input: KernelIngestInput): Promise<KernelIngestResult> {
+    const governance = this.governor.evaluateIngestion(input.tenantId, input.payload);
+    if (!governance.allowed) {
+      return { allowed: false, reason: governance.reason };
+    }
+
+    const eventId = await this.events.append(
+      input.tenantId,
+      input.sourceModule,
+      input.eventType,
+      input.correlationId,
+      governance.sanitizedPayload,
+      input.confidence ?? 1,
+      { causationId: input.causationId }
+    );
+
+    return { allowed: true, eventId };
   }
 
   registerBranch(branch: BranchAdapter): void {
