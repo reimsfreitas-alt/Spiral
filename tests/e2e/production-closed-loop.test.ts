@@ -5,32 +5,16 @@ import { KnowledgeRouter } from "../../packages/spiral-kernel/src/router";
 
 class LiteBranch {
   public state = { signalWeights: { visited_pricing: 1 } };
-
-  constructor(
-    private readonly events: EventFabric,
-    private readonly tenantId: string
-  ) {}
-
+  constructor(private readonly events: EventFabric, private readonly tenantId: string) {}
   async execute(correlationId: string): Promise<string> {
     return this.events.append(
-      this.tenantId,
-      "spiral-lite",
-      "execution.completed",
-      correlationId,
-      {
-        signal: "visited_pricing",
-        applied_weight: this.state.signalWeights.visited_pricing,
-        converted: true
-      },
-      0.98
+      this.tenantId, "spiral-lite", "execution.completed", correlationId,
+      { signal: "visited_pricing", applied_weight: this.state.signalWeights.visited_pricing, converted: true }, 0.98
     );
   }
-
   applyKnowledge(pattern: Record<string, unknown>): void {
     const multiplier = pattern.weight_multiplier;
-    if (typeof multiplier !== "number" || multiplier <= 0) {
-      throw new Error("Invalid signal multiplier");
-    }
+    if (typeof multiplier !== "number" || multiplier <= 0) throw new Error("Invalid signal multiplier");
     this.state.signalWeights.visited_pricing *= multiplier;
   }
 }
@@ -45,6 +29,11 @@ describe("Spiral OS production closed loop", () => {
     const correlationId = "77777777-7777-7777-7777-777777777777";
 
     try {
+      await pool.query(
+        "INSERT INTO tenants(tenant_id,name) VALUES($1,$2) ON CONFLICT (tenant_id) DO NOTHING",
+        [tenantId, "Spiral E2E Tenant"]
+      );
+
       const events = new EventFabric(pool);
       const knowledge = new KnowledgeFabric(pool);
       const router = new KnowledgeRouter();
@@ -52,10 +41,7 @@ describe("Spiral OS production closed loop", () => {
 
       const event1 = await lite.execute(correlationId);
       const knowledgeV1 = await knowledge.aggregateAndUpsert(
-        tenantId,
-        "signal:visited_pricing",
-        "signal_efficacy",
-        event1,
+        tenantId, "signal:visited_pricing", "signal_efficacy", event1,
         { weight_multiplier: 1.5 }
       );
 
@@ -71,35 +57,23 @@ describe("Spiral OS production closed loop", () => {
 
       const event2 = await lite.execute(correlationId);
 
-      // Truth is represented here by a persisted verification event produced
-      // only after the second execution has consumed the learned state.
       const truthEvent = await events.append(
-        tenantId,
-        "spiral-truth",
-        "truth.verified",
-        correlationId,
+        tenantId, "spiral-truth", "truth.verified", correlationId,
         {
           observed_execution_id: event2,
           applied_weight: lite.state.signalWeights.visited_pricing,
           verdict: "CONFIRMED"
-        },
-        0.99,
-        event2
+        }, 0.99, { causationId: event2 }
       );
 
       const knowledgeV2 = await knowledge.aggregateAndUpsert(
-        tenantId,
-        "signal:visited_pricing",
-        "signal_efficacy",
-        truthEvent,
+        tenantId, "signal:visited_pricing", "signal_efficacy", truthEvent,
         { weight_multiplier: 1.5 }
       );
 
       expect(knowledgeV2.version).toBe(2);
       expect(knowledgeV2.support_count).toBe(2);
-      expect(knowledgeV2.lineage.source_event_ids).toEqual(
-        expect.arrayContaining([event1, truthEvent])
-      );
+      expect(knowledgeV2.lineage.source_event_ids).toEqual(expect.arrayContaining([event1, truthEvent]));
       expect(lite.state.signalWeights.visited_pricing).toBeGreaterThan(1);
     } finally {
       await pool.end();
