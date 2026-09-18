@@ -26,7 +26,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm install
       - run: PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d spiral_test -f database/migrations/001_spiral_os_kernel.sql
       - run: npm run typecheck
